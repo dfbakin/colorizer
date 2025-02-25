@@ -1,0 +1,71 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Personalização de estilos unindo sbc-template (layout) e biblatex-abnt (citações e referências)
+% para TCCs da Computação - Atitus Educação
+% 
+% Ambiente: overleaf.com [pdfLaTeX/2023]
+% Autor: Fahad Kalil (github.com/fahadkalil)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ProvidesPackage{cc_atitus}
+
+% norma ABNT NBR 10520/2023 - Sobrenomes em minúsculas
+\renewcommand*{\mkbibnamefamily}[1]{#1}
+
+% alias para \citeonline ter o mesmo efeito que \textcite
+\NewCommandCopy\citeonline\textcite
+\RenewCommandCopy\textcite\citeonline
+\DeclareCommandCopy\citeonline\textcite
+
+% fullcite com todos autores e não como cite
+\makeatletter
+\newcommand{\tempmaxup}[1]{\def\blx@maxcitenames{99}#1}
+\makeatother
+
+\DeclareCiteCommand{\fullcite}[\tempmaxup]
+{\usebibmacro{prenote}}
+{\usedriver
+	{}
+	{\thefield{entrytype}}}
+{\multicitedelim}
+{\usebibmacro{postnote}}
+
+%% norma ABNT NBR 6023/2018 - Remover < e > das url geradas usando o comando \url
+\makeatletter
+\@ifpackageloaded{url}{%
+    \def\UrlLeft{}
+    \def\UrlRight{}
+    \urlstyle{same}
+}
+\makeatother
+
+\DeclareFieldFormat{url}{\bibstring{urlfrom}\addcolon\addspace \url{#1}}
+
+% ajusta a formatação do DOI nas referencias, porém a própria norma mostra exemplos com 'DOI:' e 'DOI'.
+%\DeclareFieldFormat{doi}{DOI\addspace \url{#1}}
+
+%% ignora o campo de url para 'article' no arquivo bib
+%\AtEveryBibitem{
+%\ifentrytype{article}{
+%    \clearfield{url}
+%}{}
+%}
+
+%% ignora o campo de isbn para 'book' no arquivo bib
+\AtEveryBibitem{
+\ifentrytype{book}{
+    \clearfield{isbn}    
+}{}
+}
+
+%% ajusta a referência nas legendas de 'Listing' para 'Algoritmo'
+\RequirePackage{listing}
+\renewcommand{\lstlistingname}{Algoritmo}
+
+\lstset{
+  basicstyle=\fontfamily{zi4}\selectfont,
+}
+\renewcommand*{\ttdefault}{cmtt}
+
+%% inclui espaço separando as referências bibliográficas
+\RequirePackage{setspace}
+\setlength\bibitemsep{\baselineskip}

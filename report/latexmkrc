@@ -1,0 +1,1 @@
+$ENV{'STYINPUTS'}='./sty//:' . $ENV{'STYINPUTS'};
