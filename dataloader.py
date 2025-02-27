@@ -4,9 +4,9 @@ import urllib.request
 import zipfile
 
 import torch
+from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from torchvision.io import read_image
 from tqdm import tqdm
 
 
@@ -64,7 +64,7 @@ class ColorizationDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img = transforms.ToPILImage()(read_image(self.images[idx]))
+        img = Image.open(self.images[idx]).convert("RGB")
         color_img = self.transform_color(img)
         gray_img = self.transform_gray(img)
         return gray_img, color_img
@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
     dataset = ColorizationDataset(coco_extract_path)
 
+    torch.manual_seed(42)
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(
