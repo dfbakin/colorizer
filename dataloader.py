@@ -3,10 +3,10 @@ import os
 import urllib.request
 import zipfile
 
+import albumentations as A
+import cv2
 import torch
-from PIL import Image
 from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
 from tqdm import tqdm
 
 
@@ -43,18 +43,21 @@ class ColorizationDataset(Dataset):
         self.images = sorted(glob.glob(os.path.join(images_dir, "*")))
 
         if transform_color is None:
-            self.transform_color = transforms.Compose(
-                [transforms.Resize((256, 256)), transforms.ToTensor()]
+            self.transform_color = A.Compose(
+                [
+                    A.Resize(width=256, height=256),
+                    A.ToTensorV2(),
+                ]
             )
         else:
             self.transform_color = transform_color
 
         if transform_gray is None:
-            self.transform_gray = transforms.Compose(
+            self.transform_gray = A.Compose(
                 [
-                    transforms.Resize((256, 256)),
-                    transforms.Grayscale(num_output_channels=1),
-                    transforms.ToTensor(),
+                    A.Resize(width=256, height=256),
+                    A.ToGray(num_output_channels=1, p=1.0),
+                    A.ToTensorV2(),
                 ]
             )
         else:
@@ -64,9 +67,10 @@ class ColorizationDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img = Image.open(self.images[idx]).convert("RGB")
-        color_img = self.transform_color(img)
-        gray_img = self.transform_gray(img)
+        img = cv2.imread(self.images[idx])
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        color_img = self.transform_color(image=img)["image"]
+        gray_img = self.transform_gray(image=img)["image"]
         return gray_img, color_img
 
 
