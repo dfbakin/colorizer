@@ -1,0 +1,6 @@
+outs:
+- md5: 8f9ff1b68ed6db106b1f5445beee6838.dir
+  size: 6639558748
+  nfiles: 40670
+  hash: md5
+  path: coco_2017_test
