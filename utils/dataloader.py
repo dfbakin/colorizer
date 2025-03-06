@@ -3,6 +3,7 @@ import os
 import urllib.request
 import zipfile
 
+import albumentations
 import cv2
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -52,6 +53,8 @@ class ColorizationDataset(Dataset):
                 )
         self.new_size = resize
 
+        self.to_tensor_albumentation = albumentations.ToTensorV2()
+
         # resize_trasform_list = [A.Resize(width=resize[0], height=resize[1])]
         #           if self.new_size is not None else []
 
@@ -84,7 +87,11 @@ class ColorizationDataset(Dataset):
         if self.new_size is not None:
             img = cv2.resize(img, self.new_size)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        return img[:, :, 0], img[:, :, 1:]  # input: L*, output: a* and b* channels
+        tensor_img = self.to_tensor_albumentation.apply(img).to(torch.float32)
+        # print(tensor_img[0:1, :, :].shape, tensor_img[1:, :, :].dtype)
+        return tensor_img[0:1, :, :], tensor_img[
+            1:, :, :
+        ]  # input: L*, output: a* and b* channels
 
 
 if __name__ == "__main__":

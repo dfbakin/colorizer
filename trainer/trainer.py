@@ -28,30 +28,32 @@ class Trainer:
     def batch2device(batch, device):
         return [item.to(device) for item in batch]
 
-    def train(self, train_loader, epoch_n):
+    def train(self, epoch_n):
         for epoch in range(epoch_n):
-            self._train_epoch(train_loader, epoch)
+            self._train_epoch(epoch)
 
     def _train_epoch(self, epoch):
         self.model.train()
         running_loss = 0.0
-        for i, batch in tqdm.tqdm(enumerate(self.train_loader)):
+        for batch in tqdm.tqdm(self.train_dataloader):
             loss = self._proccess_batch(batch, training=True)
             running_loss += loss
 
-        print(f"[Train: {epoch + 1}, {i + 1}] loss: {running_loss / i:.3f}")
+        epoch_loss = running_loss / len(self.train_dataloader)
+        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
 
         if self.val_dataloader is not None:
             self._validate_epoch(epoch)
 
-    def validate_epoch(self, epoch):
+    def _validate_epoch(self, epoch):
         self.model.eval()
         running_loss = 0.0
-        for i, batch in tqdm.tqdm(enumerate(self.val_dataloader)):
+        for batch in tqdm.tqdm(self.val_dataloader):
             loss = self._proccess_batch(batch, training=False)
             running_loss += loss
 
-        print(f"[Validation: {epoch + 1}, {i + 1}] loss: {running_loss / i:.3f}")
+        epoch_loss = running_loss / len(self.val_dataloader)
+        print(f"[Validation: {epoch + 1}] loss: {epoch_loss:.3f}")
 
     def _proccess_batch(self, batch, training=True):
         L_channel, ab_channels = self.batch2device(batch, self.device)
@@ -59,7 +61,8 @@ class Trainer:
         if training:
             self.optimizer.zero_grad()
         outputs = self.model(L_channel)
-        loss = self.criterion(outputs, ab_channels)
+        # print(outputs.shape)
+        loss = torch.mean(self.criterion(outputs, ab_channels))
         if training:
             loss.backward()
             self.optimizer.step()

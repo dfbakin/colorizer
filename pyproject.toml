@@ -3,8 +3,8 @@ name = "colorizer"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Denis Bakin",email = "denis.bakin5@gmail.com"}
-    # TODO
+    {name = "Denis Bakin", email = "denis.bakin5@gmail.com"},
+    {name = "Vitaliy Babanskiy"} # TODO?
 ]
 license = {text = "MIT"}
 readme = "README.md"
