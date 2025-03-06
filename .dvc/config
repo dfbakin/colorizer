@@ -1,0 +1,4 @@
+[core]
+    remote = public
+['remote "public"']
+    url = https://colorizer-s3-storage.storage.yandexcloud.net/dvc/
