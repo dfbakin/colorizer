@@ -9,7 +9,18 @@ Build.in pages:
 - [View](https://buildin.ai/dfbakin/share/87cb8381-036a-4ab2-b72e-25eee01672dc?code=KHTJB8)
 - [Edit](https://buildin.ai/87cb8381-036a-4ab2-b72e-25eee01672dc) (for collaborators only)
 
+# How to download datasets?
+- Install DVC with pipx
+```bash
+pipx install dvc[s3]
+```
+- And then download all all data or specific .dvc files
+```bash
+dvc install # only once from the repository's root
 
+dvc pull # to download all files
+dvc pull <filename>.dvc # to download specific model or dataset
+```
 
 # How to run?
 Install environment (we use poetry)
