@@ -3,7 +3,6 @@ import os
 import urllib.request
 import zipfile
 
-import albumentations as A
 import cv2
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -39,39 +38,53 @@ def download_and_extract(url, path):
 
 
 class ColorizationDataset(Dataset):
-    def __init__(self, images_dir, transform_color=None, transform_gray=None):
-        self.images = sorted(glob.glob(os.path.join(images_dir, "*")))
-
-        if transform_color is None:
-            self.transform_color = A.Compose(
-                [
-                    A.Resize(width=256, height=256),
-                    A.ToTensorV2(),
-                ]
-            )
+    def __init__(
+        self, images_dir, resize=(256, 256), classes_folders=False
+    ):  # transform_color=None, transform_gray=None,
+        if not classes_folders:
+            self.images_paths = sorted(glob.glob(os.path.join(images_dir, "*")))
         else:
-            self.transform_color = transform_color
+            self.images_paths = []
+            for class_folder in os.listdir(images_dir):
+                class_folder_path = os.path.join(images_dir, class_folder)
+                self.images_paths += sorted(
+                    glob.glob(os.path.join(class_folder_path, "*"))
+                )
+        self.new_size = resize
 
-        if transform_gray is None:
-            self.transform_gray = A.Compose(
-                [
-                    A.Resize(width=256, height=256),
-                    A.ToGray(num_output_channels=1, p=1.0),
-                    A.ToTensorV2(),
-                ]
-            )
-        else:
-            self.transform_gray = transform_gray
+        # resize_trasform_list = [A.Resize(width=resize[0], height=resize[1])]
+        #           if self.new_size is not None else []
+
+        # if transform_color is None:
+        #     self.transform_color = A.Compose(
+        #         resize_trasform_list +
+        #         [
+        #             A.ToTensorV2(),
+        #         ]
+        #     )
+        # else:
+        #     self.transform_color = transform_color
+
+        # if transform_gray is None:
+        #     self.transform_gray = A.Compose(
+        #         resize_trasform_list +
+        #         [
+        #             A.ToGray(num_output_channels=1, p=1.0),
+        #             A.ToTensorV2(),
+        #         ]
+        #     )
+        # else:
+        #     self.transform_gray = transform_gray
 
     def __len__(self):
-        return len(self.images)
+        return len(self.images_paths)
 
     def __getitem__(self, idx):
-        img = cv2.imread(self.images[idx])
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        color_img = self.transform_color(image=img)["image"]
-        gray_img = self.transform_gray(image=img)["image"]
-        return gray_img, color_img
+        img = cv2.imread(self.images_paths[idx])
+        if self.new_size is not None:
+            img = cv2.resize(img, self.new_size)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        return img[:, :, 0], img[:, :, 1:]  # input: L*, output: a* and b* channels
 
 
 if __name__ == "__main__":
