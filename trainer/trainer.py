@@ -3,7 +3,6 @@ import torch
 import tqdm
 from IPython.display import clear_output
 
-
 class Trainer:
     def __init__(
         self,
@@ -65,9 +64,10 @@ class Trainer:
     def _validate_epoch(self, epoch):
         self.model.eval()
         running_loss = 0.0
-        for batch in tqdm.tqdm(self.val_dataloader):
-            loss = self._proccess_batch(batch, training=False)
-            running_loss += loss
+        with torch.no_grad():
+            for batch in tqdm.tqdm(self.val_dataloader):
+                loss = self._proccess_batch(batch, training=False)
+                running_loss += loss
 
         epoch_loss = running_loss / len(self.val_dataloader)
         self.val_losses.append(epoch_loss)

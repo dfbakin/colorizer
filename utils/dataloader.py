@@ -8,6 +8,7 @@ import cv2
 import torch
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+import numpy as np
 
 
 def download_and_extract(url, path):
@@ -56,6 +57,8 @@ class ColorizationDataset(Dataset):
                 )
         self.new_size = resize
 
+
+        # TODO create a custom albumentation transform to wrap OpenCV cvtColor
         self.to_tensor_albumentation = albumentations.ToTensorV2()
 
         # resize_trasform_list = [A.Resize(width=resize[0], height=resize[1])]
@@ -96,35 +99,74 @@ class ColorizationDataset(Dataset):
             1:, :, :
         ] / self.ab_norm_factor  # input: L*, output: a* and b* channels
 
+    @staticmethod
+    def torch_L_ab_to_cvimage(L_input, ab_input):
+        # expected batches shape: [B, 1, H, W] and [B, 2, H, W]
+
+        cielab_img = torch.cat(
+            [
+                L_input * ColorizationDataset.l_norm_factor,
+                ab_input * ColorizationDataset.ab_norm_factor,
+            ],
+            dim=1,
+        ).numpy()
+        cielab_img = cielab_img.transpose(0, 2, 3, 1)
+        # reference "RGB ↔ CIE L*u*v*" from https://docs.opencv.org/4.8.0/de/d25/imgproc_color_conversions.html
+        cielab_img = np.clip(cielab_img, 0, 255).astype(np.uint8)
+        result = np.zeros_like(cielab_img, dtype=np.uint8)
+        for i in range(cielab_img.shape[0]):
+            result[i, :, :, :] = cv2.cvtColor(
+                cielab_img[i, :, :, :], cv2.COLOR_LAB2RGB
+            )[i, :, :, :]
+        return result
+
+    @staticmethod
+    def cvimage_to_torch_L_ab(cv_images_batch):
+        # expected batches shape RGB images: [B, H, W, 3]
+        for i in range(cv_images_batch.shape[0]):
+            cv_images_batch[i, :, :, :] = cv2.cvtColor(
+                cv_images_batch[i, :, :, :], cv2.COLOR_LAB2RGB
+            )
+
+        tensor_img = torch.tensor(
+            cv_images_batch.transpose(0, 3, 1, 2), dtype=torch.float32
+        )
+
+        return tensor_img[:, 0, :, :] / ColorizationDataset.l_norm_factor, tensor_img[
+            :, 1:, :, :
+        ] / ColorizationDataset.ab_norm_factor
+
 
 if __name__ == "__main__":
-    coco_dataset = "val2017"
-    coco_url = "http://images.cocodataset.org/zips/" + coco_dataset + ".zip"
-    coco_path = "./coco_data"
-    coco_extract_path = os.path.join(coco_path, coco_dataset)
+    print("Use DVC to download the dataset")
+    raise SystemExit
+    # coco_dataset = "val2017"
+    # coco_url = "http://images.cocodataset.org/zips/" + coco_dataset + ".zip"
+    # coco_path = "./coco_data"
+    # coco_extract_path = os.path.join(coco_path, coco_dataset)
 
-    if not os.path.exists(coco_path):
-        download_and_extract(coco_url, coco_path)
-    else:
-        print("COCO dataset already extracted.")
+    # if not os.path.exists(coco_path):
+    #     download_and_extract(coco_url, coco_path)
+    # else:
+    #     print("COCO dataset already extracted.")
 
-    dataset = ColorizationDataset(coco_extract_path)
+    # dataset = ColorizationDataset(coco_extract_path)
 
-    torch.manual_seed(42)
-    train_size = int(0.8 * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, [train_size, test_size]
-    )
+    # torch.manual_seed(42)
+    # train_size = int(0.8 * len(dataset))
+    # test_size = len(dataset) - train_size
+    # train_dataset, test_dataset = torch.utils.data.random_split(
+    #     dataset, [train_size, test_size]
+    # )
 
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+    # train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    # test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
-    print(f"Total images: {len(dataset)}")
-    print(f"Train images: {len(train_dataset)}")
-    print(f"Test images: {len(test_dataset)}")
+    # print(f"Total images: {len(dataset)}")
+    # print(f"Train images: {len(train_dataset)}")
+    # print(f"Test images: {len(test_dataset)}")
 
-    for gray, color in train_loader:
-        print(f"Gray image shape: {gray.shape}")
-        print(f"Color image shape: {color.shape}")
-        break
+    # for gray, color in train_loader:
+    #     print(f"Gray image shape: {gray.shape}")
+    #     print(f"Color image shape: {color.shape}")
+    #     break
