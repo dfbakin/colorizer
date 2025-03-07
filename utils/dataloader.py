@@ -39,6 +39,9 @@ def download_and_extract(url, path):
 
 
 class ColorizationDataset(Dataset):
+    ab_norm_factor = 256.0
+    l_norm_factor = 256.0
+
     def __init__(
         self, images_dir, resize=(256, 256), classes_folders=False
     ):  # transform_color=None, transform_gray=None,
@@ -89,9 +92,9 @@ class ColorizationDataset(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         tensor_img = self.to_tensor_albumentation.apply(img).to(torch.float32)
         # print(tensor_img[0:1, :, :].shape, tensor_img[1:, :, :].dtype)
-        return tensor_img[0:1, :, :], tensor_img[
+        return tensor_img[0:1, :, :] / self.l_norm_factor, tensor_img[
             1:, :, :
-        ]  # input: L*, output: a* and b* channels
+        ] / self.ab_norm_factor  # input: L*, output: a* and b* channels
 
 
 if __name__ == "__main__":

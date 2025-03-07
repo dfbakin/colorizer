@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
 import torch
 import tqdm
+from IPython.display import clear_output
 
 
 class Trainer:
@@ -24,11 +26,17 @@ class Trainer:
         self.logger = logger
         self.scheduler = scheduler
 
+        self.train_losses = []
+        self.val_losses = []
+
     @staticmethod
     def batch2device(batch, device):
         return [item.to(device) for item in batch]
 
     def train(self, epoch_n):
+        self.train_losses = []
+        self.val_losses = []
+
         for epoch in range(epoch_n):
             self._train_epoch(epoch)
 
@@ -40,10 +48,19 @@ class Trainer:
             running_loss += loss
 
         epoch_loss = running_loss / len(self.train_dataloader)
-        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
+        self.train_losses.append(epoch_loss)
 
         if self.val_dataloader is not None:
             self._validate_epoch(epoch)
+
+        # Plot and clear output
+        clear_output(wait=True)
+        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
+        plt.plot(self.train_losses, label="Train Loss")
+        if self.val_dataloader is not None:
+            plt.plot(self.val_losses, label="Validation Loss")
+        plt.legend()
+        plt.show()
 
     def _validate_epoch(self, epoch):
         self.model.eval()
@@ -53,6 +70,7 @@ class Trainer:
             running_loss += loss
 
         epoch_loss = running_loss / len(self.val_dataloader)
+        self.val_losses.append(epoch_loss)
         print(f"[Validation: {epoch + 1}] loss: {epoch_loss:.3f}")
 
     def _proccess_batch(self, batch, training=True):
