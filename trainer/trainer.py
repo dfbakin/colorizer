@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import tqdm
 from IPython.display import clear_output
+from utils import WandbLogger, MetricTracker
 
 class Trainer:
     def __init__(
@@ -12,7 +13,8 @@ class Trainer:
         train_dataloader,
         val_dataloader=None,
         scheduler=None,
-        logger=None,
+        use_logger=False,
+        config=None,
         device="cpu",
     ):
         self.model = model
@@ -22,29 +24,52 @@ class Trainer:
 
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        self.logger = logger
+        if use_logger:
+            self.logger = WandbLogger("colorizer", config)
+        else:
+            self.logger = None
         self.scheduler = scheduler
 
-        self.train_losses = []
-        self.val_losses = []
+        self.train_losses = MetricTracker("train_loss")
+        self.val_losses = MetricTracker("val_loss")
+
+        self.current_trained_epochs = 0
+
 
     @staticmethod
     def batch2device(batch, device):
         return [item.to(device) for item in batch]
 
     def train(self, epoch_n):
-        self.train_losses = []
-        self.val_losses = []
+        if epoch_n <= self.current_trained_epochs:
+            raise ValueError("The number of epochs should be greater than the current trained epochs")
 
-        for epoch in range(epoch_n):
-            self._train_epoch(epoch)
+        for epoch in range(self.current_trained_epochs, epoch_n):
+            try:
+                self._train_epoch(epoch)
+            except KeyboardInterrupt:
+                print("Training interrupted, but current training progress is preserve")
+                print(f"Current trained epochs: {self.current_trained_epochs}")
+                break
+            except Exception as err:
+                if "out of memory" in str(err):
+                    print("Out of memory, skipping batch")
+                    torch.cuda.empty_cache()
+                    continue
+                else:
+                    raise err
+            self.current_trained_epochs = epoch + 1
 
     def _train_epoch(self, epoch):
         self.model.train()
         running_loss = 0.0
-        for batch in tqdm.tqdm(self.train_dataloader):
+        for batch_idx, batch in tqdm.tqdm(enumerate(self.train_dataloader), desc="train", 
+                                          total=len(self.train_dataloader)):
+            
+            self.train_losses.update(self._proccess_batch(batch, training=True))
             loss = self._proccess_batch(batch, training=True)
             running_loss += loss
+        
 
         epoch_loss = running_loss / len(self.train_dataloader)
         self.train_losses.append(epoch_loss)
@@ -65,7 +90,8 @@ class Trainer:
         self.model.eval()
         running_loss = 0.0
         with torch.no_grad():
-            for batch in tqdm.tqdm(self.val_dataloader):
+            for batch_idx, batch in tqdm.tqdm(enumerate(self.val_dataloader), desc="val", 
+                                          total=len(self.val_dataloader)):
                 loss = self._proccess_batch(batch, training=False)
                 running_loss += loss
 
@@ -79,7 +105,6 @@ class Trainer:
         if training:
             self.optimizer.zero_grad()
         outputs = self.model(L_channel)
-        # print(outputs.shape)
         loss = torch.mean(self.criterion(outputs, ab_channels))
         if training:
             loss.backward()
