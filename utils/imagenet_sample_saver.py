@@ -1,13 +1,13 @@
-from nltk.corpus import wordnet
 import os
 import random
 
 
 def copy_chosen(source, destination, samples_n=50, cnt=-1):
     for filename in random.sample(os.listdir(current_class_folder), samples_n):
-        # print(f"cp {os.path.join(current_class_folder, filename)} {os.path.join(base_dist_path, dirname)}")
-        os.system(f"cp {os.path.join(current_class_folder, filename)} {os.path.join(base_dist_path, dirname)}")
+        file_path = os.path.join(current_class_folder, filename)
+        os.system(f"cp {file_path} {os.path.join(base_dist_path, dirname)}")
     print(f"Done with {dirname} \t #{cnt}")
+
 
 base_source_path = ""
 base_dist_path = ""
@@ -24,5 +24,3 @@ for dirname in os.listdir(base_source_path):
     current_class_folder = os.path.join(base_source_path, dirname)
     copy_chosen(current_class_folder, class_dist, 50000 // classes_n, i)
     i += 1
-
-    

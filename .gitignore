@@ -8,3 +8,4 @@
 tmp
 .config
 .vscode
+**/__pycache__
