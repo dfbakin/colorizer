@@ -21,7 +21,7 @@ class MetricTracker:
         self.steps_count = 0
 
     @property
-    def avg(self):
+    def mean(self):
         if self.nan:
             raise ValueError("Cannot calculate average for metric with nan=True")
         return self.sum / self.steps_count

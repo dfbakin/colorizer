@@ -60,29 +60,35 @@ class Trainer:
                     raise err
             self.current_trained_epochs = epoch + 1
 
+        if self.logger:
+            self.logger.log({"train_loss": self.train_losses.mean}, 
+                            step=self.current_trained_epochs)
+            if self.val_dataloader is not None:
+                self.logger.log({"val_loss": self.val_losses.mean}, 
+                                step=self.current_trained_epochs)
+
     def _train_epoch(self, epoch):
         self.model.train()
         running_loss = 0.0
         for batch_idx, batch in tqdm.tqdm(enumerate(self.train_dataloader), desc="train", 
                                           total=len(self.train_dataloader)):
             
-            self.train_losses.update(self._proccess_batch(batch, training=True))
             loss = self._proccess_batch(batch, training=True)
             running_loss += loss
         
-
         epoch_loss = running_loss / len(self.train_dataloader)
-        self.train_losses.append(epoch_loss)
+        self.train_losses.update(epoch_loss)
+
+        clear_output(wait=True)
+        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
 
         if self.val_dataloader is not None:
             self._validate_epoch(epoch)
-
+        
         # Plot and clear output
-        clear_output(wait=True)
-        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
-        plt.plot(self.train_losses, label="Train Loss")
+        plt.plot(self.train_losses.values, label="Train Loss")
         if self.val_dataloader is not None:
-            plt.plot(self.val_losses, label="Validation Loss")
+            plt.plot(self.val_losses.values, label="Validation Loss")
         plt.legend()
         plt.show()
 
@@ -96,7 +102,7 @@ class Trainer:
                 running_loss += loss
 
         epoch_loss = running_loss / len(self.val_dataloader)
-        self.val_losses.append(epoch_loss)
+        self.val_losses.update(epoch_loss)
         print(f"[Validation: {epoch + 1}] loss: {epoch_loss:.3f}")
 
     def _proccess_batch(self, batch, training=True):
