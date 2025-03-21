@@ -60,12 +60,12 @@ class Trainer:
                     raise err
             self.current_trained_epochs = epoch + 1
 
-        if self.logger:
-            self.logger.log({"train_loss": self.train_losses.mean}, 
-                            step=self.current_trained_epochs)
-            if self.val_dataloader is not None:
-                self.logger.log({"val_loss": self.val_losses.mean}, 
+            if self.logger:
+                self.logger.log({"train_loss": self.train_losses.mean}, 
                                 step=self.current_trained_epochs)
+                if self.val_dataloader is not None:
+                    self.logger.log({"val_loss": self.val_losses.mean}, 
+                                    step=self.current_trained_epochs)
 
     def _train_epoch(self, epoch):
         self.model.train()
