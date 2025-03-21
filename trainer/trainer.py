@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import torch
 import tqdm
 from IPython.display import clear_output
-from utils import WandbLogger, MetricTracker
+
+from utils import MetricTracker, WandbLogger
+
 
 class Trainer:
     def __init__(
@@ -35,14 +37,15 @@ class Trainer:
 
         self.current_trained_epochs = 0
 
-
     @staticmethod
     def batch2device(batch, device):
         return [item.to(device) for item in batch]
 
     def train(self, epoch_n):
         if epoch_n <= self.current_trained_epochs:
-            raise ValueError("The number of epochs should be greater than the current trained epochs")
+            raise ValueError(
+                "The number of epochs should be greater than the current trained epochs"
+            )
 
         for epoch in range(self.current_trained_epochs, epoch_n):
             try:
@@ -61,21 +64,27 @@ class Trainer:
             self.current_trained_epochs = epoch + 1
 
             if self.logger:
-                self.logger.log({"train_loss": self.train_losses.mean}, 
-                                step=self.current_trained_epochs)
+                self.logger.log(
+                    {"train_loss": self.train_losses.mean},
+                    step=self.current_trained_epochs,
+                )
                 if self.val_dataloader is not None:
-                    self.logger.log({"val_loss": self.val_losses.mean}, 
-                                    step=self.current_trained_epochs)
+                    self.logger.log(
+                        {"val_loss": self.val_losses.mean},
+                        step=self.current_trained_epochs,
+                    )
 
     def _train_epoch(self, epoch):
         self.model.train()
         running_loss = 0.0
-        for batch_idx, batch in tqdm.tqdm(enumerate(self.train_dataloader), desc="train", 
-                                          total=len(self.train_dataloader)):
-            
+        for batch_idx, batch in tqdm.tqdm(
+            enumerate(self.train_dataloader),
+            desc="train",
+            total=len(self.train_dataloader),
+        ):
             loss = self._proccess_batch(batch, training=True)
             running_loss += loss
-        
+
         epoch_loss = running_loss / len(self.train_dataloader)
         self.train_losses.update(epoch_loss)
 
@@ -84,7 +93,7 @@ class Trainer:
 
         if self.val_dataloader is not None:
             self._validate_epoch(epoch)
-        
+
         # Plot and clear output
         plt.plot(self.train_losses.values, label="Train Loss")
         if self.val_dataloader is not None:
@@ -96,8 +105,11 @@ class Trainer:
         self.model.eval()
         running_loss = 0.0
         with torch.no_grad():
-            for batch_idx, batch in tqdm.tqdm(enumerate(self.val_dataloader), desc="val", 
-                                          total=len(self.val_dataloader)):
+            for batch_idx, batch in tqdm.tqdm(
+                enumerate(self.val_dataloader),
+                desc="val",
+                total=len(self.val_dataloader),
+            ):
                 loss = self._proccess_batch(batch, training=False)
                 running_loss += loss
 

@@ -5,10 +5,10 @@ import zipfile
 
 import albumentations
 import cv2
-import torch
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 import numpy as np
+import torch
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
 
 def download_and_extract(url, path):
@@ -38,25 +38,29 @@ def download_and_extract(url, path):
 
     os.remove(zip_path)
 
+
 def colorfulness_metric(image):
     """
-    Compute a measure of colorfulness based on the standard deviation 
+    Compute a measure of colorfulness based on the standard deviation
     and mean of opponent color channels.
     """
     (B, G, R) = cv2.split(image.astype("float"))
-    
+
     # Compute color differences
     rg = np.abs(R - G)
     yb = np.abs(0.5 * (R + G) - B)
-    
+
     # Compute mean and standard deviation
     std_rg, mean_rg = np.std(rg), np.mean(rg)
     std_yb, mean_yb = np.std(yb), np.mean(yb)
-    
+
     # Final colorfulness metric
-    colorfulness = np.sqrt(std_rg**2 + std_yb**2) + 0.3 * np.sqrt(mean_rg**2 + mean_yb**2)
-    
+    colorfulness = np.sqrt(std_rg**2 + std_yb**2) + 0.3 * np.sqrt(
+        mean_rg**2 + mean_yb**2
+    )
+
     return colorfulness
+
 
 def is_colorful(image, threshold=1):
     """
@@ -70,7 +74,11 @@ class ColorizationDataset(Dataset):
     l_norm_factor = 256.0
 
     def __init__(
-        self, images_dir, resize=(256, 256), classes_folders=False, filter_colorless=True
+        self,
+        images_dir,
+        resize=(256, 256),
+        classes_folders=False,
+        filter_colorless=True,
     ):  # transform_color=None, transform_gray=None,
         if not classes_folders:
             self.images_paths = sorted(glob.glob(os.path.join(images_dir, "*")))
@@ -81,7 +89,7 @@ class ColorizationDataset(Dataset):
                 self.images_paths += sorted(
                     glob.glob(os.path.join(class_folder_path, "*"))
                 )
-        
+
         self.new_size = resize
         # TODO create a custom albumentation transform to wrap OpenCV cvtColor
         self.to_tensor_albumentation = albumentations.ToTensorV2()
@@ -136,7 +144,7 @@ class ColorizationDataset(Dataset):
         return tensor_img[0:1, :, :] / self.l_norm_factor, tensor_img[
             1:, :, :
         ] / self.ab_norm_factor  # input: L*, output: a* and b* channels
-    
+
     def get_color_metric(self, idx):
         img = cv2.imread(self.images_paths[idx])
         return colorfulness_metric(img)
@@ -160,9 +168,7 @@ class ColorizationDataset(Dataset):
         print(result.shape)
         print(cielab_img.shape)
         for i in range(cielab_img.shape[0]):
-            result[i, :, :, :] = cv2.cvtColor(
-                cielab_img[i, :, :, :], cv2.COLOR_LAB2RGB
-            )
+            result[i, :, :, :] = cv2.cvtColor(cielab_img[i, :, :, :], cv2.COLOR_LAB2RGB)
         return result
 
     @staticmethod
