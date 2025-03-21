@@ -4,6 +4,7 @@
 *.JPG
 *.JPEG
 *.zip
+*.pyc
 
 tmp
 .config
