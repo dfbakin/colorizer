@@ -7,6 +7,7 @@
 *.pyc
 
 tmp
+wandb
 .config
 .vscode
 **/__pycache__

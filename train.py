@@ -1,7 +1,6 @@
 import torch
 import torch.utils.data as torch_data
 
-import losses
 import trainer
 from models import UNet
 from utils import ColorizationDataset
@@ -30,7 +29,7 @@ val_loader = torch_data.DataLoader(
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = UNet(1, 2).to(device)
 
-criterion = losses.HuberLoss()
+criterion = torch.nn.HuberLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 baseline_trainer = trainer.Trainer(
     model, optimizer, criterion, train_loader, val_dataloader=val_loader, device=device
