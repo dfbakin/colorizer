@@ -1,0 +1,6 @@
+outs:
+- md5: 86b10145d59bb1f1b6a985dbbabcdc65.dir
+  size: 5699962868
+  nfiles: 50000
+  hash: md5
+  path: imagenet_classes

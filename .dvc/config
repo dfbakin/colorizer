@@ -1,0 +1,5 @@
+[core]
+    remote = public
+    autostage = true
+['remote "public"']
+    url = https://colorizer-s3-storage.storage.yandexcloud.net/dvc/

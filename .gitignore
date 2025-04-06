@@ -1,0 +1,13 @@
+*.png
+*.jpg
+*.jpeg
+*.JPG
+*.JPEG
+*.zip
+*.pyc
+
+tmp
+wandb
+.config
+.vscode
+**/__pycache__
