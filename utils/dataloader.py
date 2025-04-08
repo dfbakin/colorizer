@@ -70,8 +70,9 @@ def is_colorful(image, threshold=1):
 
 
 class ColorizationDataset(Dataset):
+    ab_reduce = 40
     ab_norm_factor = 256.0
-    l_norm_factor = 256.0
+    l_norm_factor = 180.0
 
     def __init__(
         self,
@@ -107,30 +108,6 @@ class ColorizationDataset(Dataset):
                 del img
         self.images_paths = self.colorful_images
 
-        # resize_trasform_list = [A.Resize(width=resize[0], height=resize[1])]
-        #           if self.new_size is not None else []
-
-        # if transform_color is None:
-        #     self.transform_color = A.Compose(
-        #         resize_trasform_list +
-        #         [
-        #             A.ToTensorV2(),
-        #         ]
-        #     )
-        # else:
-        #     self.transform_color = transform_color
-
-        # if transform_gray is None:
-        #     self.transform_gray = A.Compose(
-        #         resize_trasform_list +
-        #         [
-        #             A.ToGray(num_output_channels=1, p=1.0),
-        #             A.ToTensorV2(),
-        #         ]
-        #     )
-        # else:
-        #     self.transform_gray = transform_gray
-
     def __len__(self):
         return len(self.images_paths)
 
@@ -140,10 +117,11 @@ class ColorizationDataset(Dataset):
             img = cv2.resize(img, self.new_size)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         tensor_img = self.to_tensor_albumentation.apply(img).to(torch.float32)
-        # print(tensor_img[0:1, :, :].shape, tensor_img[1:, :, :].dtype)
-        return tensor_img[0:1, :, :] / self.l_norm_factor, tensor_img[
+        # print(tensor_img[0:1, :, :].min(), tensor_img[0:1, :, :].max(),
+        #       tensor_img[1:, :, :].min(), tensor_img[1:, :, :].max())
+        return tensor_img[0:1, :, :] / self.l_norm_factor, (tensor_img[
             1:, :, :
-        ] / self.ab_norm_factor  # input: L*, output: a* and b* channels
+        ] - self.ab_reduce) / self.ab_norm_factor  # input: L*, output: a* and b* channels
 
     def get_color_metric(self, idx):
         img = cv2.imread(self.images_paths[idx])
@@ -157,7 +135,8 @@ class ColorizationDataset(Dataset):
         cielab_img = torch.cat(
             [
                 L_input * (ColorizationDataset.l_norm_factor if denorm else 1.0),
-                ab_input * (ColorizationDataset.ab_norm_factor if denorm else 1.0),
+                ab_input * (ColorizationDataset.ab_norm_factor if denorm else 1.0) + 
+                ColorizationDataset.ab_reduce * int(denorm),
             ],
             dim=1,
         ).numpy()
@@ -183,9 +162,9 @@ class ColorizationDataset(Dataset):
             cv_images_batch.transpose(0, 3, 1, 2), dtype=torch.float32
         )
 
-        return tensor_img[:, 0, :, :] / ColorizationDataset.l_norm_factor, tensor_img[
+        return tensor_img[:, 0, :, :] / ColorizationDataset.l_norm_factor, (tensor_img[
             :, 1:, :, :
-        ] / ColorizationDataset.ab_norm_factor
+        ] - ColorizationDataset.ab_reduce) / ColorizationDataset.ab_norm_factor
 
 
 if __name__ == "__main__":
