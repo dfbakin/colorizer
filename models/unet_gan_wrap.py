@@ -45,6 +45,9 @@ class UNetGANWrap(nn.Module):
         self.opt_G = optim.Adam(self.net_G.parameters(), lr=lr_G, betas=(beta1, beta2))
         self.opt_D = optim.Adam(self.net_D.parameters(), lr=lr_D, betas=(beta1, beta2))
 
+        self.loss_G = 0.0
+        self.loss_D = 0.0
+
     def set_requires_grad(self, model, requires_grad=True):
         for p in model.parameters():
             p.requires_grad = requires_grad
