@@ -1,28 +1,30 @@
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
 import tqdm
 from IPython.display import clear_output
 
-from utils import MetricTracker, WandbLogger
+from utils import WandbLogger
 
 
 class Trainer:
     def __init__(
         self,
         model,
-        optimizer,
-        criterion,
         train_dataloader,
         val_dataloader=None,
-        scheduler=None,
         use_logger=False,
         config=None,
+        eval_quality_metric=nn.MSELoss(),
         device="cpu",
+        use_checkpointing=False,
+        checkpoit_dir="",
     ):
         self.model = model
-        self.optimizer = optimizer
-        self.criterion = criterion
         self.device = device
+        self.eval_quality_metric = eval_quality_metric
+        self.use_checkpointing = use_checkpointing
+        self.checkpoint_dir = checkpoit_dir
 
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -30,16 +32,14 @@ class Trainer:
             self.logger = WandbLogger("colorizer", config)
         else:
             self.logger = None
-        self.scheduler = scheduler
 
-        self.train_losses = MetricTracker("train_loss")
-        self.val_losses = MetricTracker("val_loss")
+        self.train_losses = {
+            "loss_G": [],
+            "loss_D": [],
+        }
+        self.val_loss = []
 
         self.current_trained_epochs = 0
-
-    @staticmethod
-    def batch2device(batch, device):
-        return [item.to(device) for item in batch]
 
     def train(self, epoch_n):
         if epoch_n <= self.current_trained_epochs:
@@ -73,63 +73,92 @@ class Trainer:
                         {"val_loss": self.val_losses.mean},
                         step=self.current_trained_epochs,
                     )
+            if self.use_checkpointing:
+                self.model.save(self.checkpoint_dir, epoch=self.current_trained_epochs)
 
     def _train_epoch(self, epoch):
-        self.model.train()
-        running_loss = 0.0
+        # self.model.train()
+        epoch_loss = {
+            "loss_G": 0.0,
+            "loss_D": 0.0,
+        }
         for batch_idx, batch in tqdm.tqdm(
             enumerate(self.train_dataloader),
             desc="train",
             total=len(self.train_dataloader),
         ):
-            loss = self._proccess_batch(batch, training=True)
-            running_loss += loss
+            self.model.setup_input(batch)
+            self.model.forward()
+            losses = self.model.optimize()
+            epoch_loss["loss_G"] += losses["loss_G"]
+            epoch_loss["loss_D"] += losses["loss_D"]
 
-        epoch_loss = running_loss / len(self.train_dataloader)
-        self.train_losses.update(epoch_loss)
+        epoch_loss["loss_G"] /= len(self.train_dataloader)
+        epoch_loss["loss_D"] /= len(self.train_dataloader)
+        if self.logger:
+            self.logger.log(
+                {
+                    "train_loss_G": epoch_loss["loss_G"],
+                    "train_loss_D": epoch_loss["loss_D"],
+                },
+                step=self.current_trained_epochs,
+            )
+
+        # self.train_losses.update(epoch_loss)
+        self.train_losses["loss_G"].append(epoch_loss["loss_G"])
+        self.train_losses["loss_D"].append(epoch_loss["loss_D"])
 
         clear_output(wait=True)
-        print(f"[Train: {epoch + 1}] loss: {epoch_loss:.3f}")
+        print(
+            f"[Train: {epoch + 1}] loss_G: {epoch_loss['loss_G']:.3f} "
+            f"loss_D: {epoch_loss['loss_D']:.3f}"
+        )
 
         if self.val_dataloader is not None:
             self._validate_epoch(epoch)
 
-        # Plot and clear output
-        plt.plot(self.train_losses.values, label="Train Loss")
+        # Plot generator loss
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.train_losses["loss_G"], label="Train Loss G")
+        plt.title("Generator Loss (with GAN loss)")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+        # Plot discriminator loss
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.train_losses["loss_D"], label="Train Loss D")
+        plt.title("Discriminator Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+        plt.figure(figsize=(10, 5))
         if self.val_dataloader is not None:
-            plt.plot(self.val_losses.values, label="Validation Loss")
+            plt.plot(self.val_loss, label="Validation Loss G")
+        plt.title("MSE Generator Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
         plt.legend()
         plt.show()
 
     def _validate_epoch(self, epoch):
-        self.model.eval()
         running_loss = 0.0
-        with torch.no_grad():
-            for batch_idx, batch in tqdm.tqdm(
-                enumerate(self.val_dataloader),
-                desc="val",
-                total=len(self.val_dataloader),
-            ):
-                loss = self._proccess_batch(batch, training=False)
-                running_loss += loss
+        for batch_idx, batch in tqdm.tqdm(
+            enumerate(self.val_dataloader),
+            desc="val",
+            total=len(self.val_dataloader),
+        ):
+            ab_pred = self.model.eval_generator(batch)
+            running_loss += self.eval_quality_metric(
+                ab_pred, batch[1].to(self.device)
+            ).item()
 
         epoch_loss = running_loss / len(self.val_dataloader)
-        self.val_losses.update(epoch_loss)
-        print(f"[Validation: {epoch + 1}] loss: {epoch_loss:.3f}")
-
-    def _proccess_batch(self, batch, training=True):
-        L_channel, ab_channels = self.batch2device(batch, self.device)
-
-        if training:
-            self.optimizer.zero_grad()
-        outputs = self.model(L_channel)
-        loss = torch.mean(self.criterion(outputs, ab_channels))
-        if training:
-            loss.backward()
-            self.optimizer.step()
-            if self.scheduler is not None:
-                self.scheduler.step()
-        return loss.item()
+        self.val_loss.append(epoch_loss)
+        print(f"[Validation: {epoch + 1}] loss_G: {epoch_loss:.3f}")
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)

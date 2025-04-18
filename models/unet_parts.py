@@ -45,7 +45,7 @@ class Down(nn.Module):
 class Up(nn.Module):
     """Upscaling then double conv"""
 
-    def __init__(self, in_channels, out_channels, bilinear=True):
+    def __init__(self, in_channels, out_channels, bilinear=False):
         super().__init__()
 
         # if bilinear, use the normal convolutions to reduce the number of channels
@@ -75,7 +75,11 @@ class Up(nn.Module):
 class OutConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(OutConv, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.out_conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1),
+            nn.BatchNorm2d(out_channels),
+            nn.Sigmoid(),
+        )
 
     def forward(self, x):
-        return self.conv(x)
+        return self.out_conv(x)
