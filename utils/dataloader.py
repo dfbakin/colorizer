@@ -89,7 +89,6 @@ class ColorizationDataset(Dataset):
 
     @staticmethod
     def torch_L_ab_to_cvimage(L_input, ab_input, denorm=True):
-        print(L_input.shape, ab_input.shape)
         # expected batches shape: [B, 1, H, W] and [B, 2, H, W]
 
         cielab_img = torch.cat(
@@ -104,8 +103,6 @@ class ColorizationDataset(Dataset):
         # reference "RGB ↔ CIE L*u*v*" from https://docs.opencv.org/4.8.0/de/d25/imgproc_color_conversions.html
         cielab_img = np.clip(cielab_img, 0, 255).astype(np.uint8)
         result = np.zeros_like(cielab_img, dtype=np.uint8)
-        print(result.shape)
-        print(cielab_img.shape)
         for i in range(cielab_img.shape[0]):
             result[i, :, :, :] = cv2.cvtColor(cielab_img[i, :, :, :], cv2.COLOR_LAB2RGB)
         return result

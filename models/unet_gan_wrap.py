@@ -131,6 +131,4 @@ class UNetGANWrap(nn.Module):
         self.opt_D.load_state_dict(torch.load(path + "/opt_D.pth"))
         self.net_G.eval()
         self.net_D.eval()
-        self.opt_G.eval()
-        self.opt_D.eval()
         return self.net_G, self.net_D, self.opt_G, self.opt_D

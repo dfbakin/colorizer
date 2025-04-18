@@ -25,6 +25,7 @@ dependencies = [
     "torchsummary (>=1.5.1,<2.0.0)",
     "fastai (>=2.7.19,<3.0.0)",
     "boto3 (>=1.37.32,<2.0.0)",
+    "lpips (>=0.1.4,<0.2.0)",
 ]
 
 [build-system]
