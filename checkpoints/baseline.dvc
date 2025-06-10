@@ -1,0 +1,6 @@
+outs:
+- md5: d60e5490b43e10f8ae6f434abce1a1c2.dir
+  size: 411376051
+  nfiles: 4
+  hash: md5
+  path: baseline
