@@ -1,21 +1,21 @@
-FROM ubuntu:24.04
+FROM nvidia/cuda:12.0.1-base-ubuntu22.04
 
-RUN apt update && apt install -y pipx python3-pip git
+# Install dependencies
+RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONTAINER_TIMEZONE > /etc/timezone
+RUN apt update && apt install -y pipx python3-pip git ffmpeg libsm6 libxext6
 RUN pipx ensurepath
-RUN pipx install poetry dvc[s3]
+RUN pipx install dvc[s3]
 ENV PATH=/root/.local/bin:$PATH
 
-RUN apt update && apt install -y ffmpeg libsm6 libxext6
+RUN pip3 install torch opencv-python numpy albumentations torchvision python-telegram-bot \
+    fastai torchvision boto3 wandb
 
+# Clone the repository
 RUN git clone https://github.com/dfbakin/colorizer.git colorizer
 WORKDIR /colorizer
 
-RUN git checkout deploy-tg-bot
-
-RUN poetry install --no-root
+# Pull checkpoints and install dependencies
 RUN dvc pull checkpoints/baseline.dvc
 
-WORKDIR /colorizer
-# docker run -e TELEGRAM_BOT_TOKEN=your_token_here your_image
-
-CMD ["poetry", "run", "python", "deploy_tg_bot.py", "$TELEGRAM_BOT_TOKEN"]
+# Set the entrypoint
+CMD ["sh", "-c", "python3 deploy_tg_bot.py $TELEGRAM_BOT_TOKEN"]

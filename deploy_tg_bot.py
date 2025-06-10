@@ -38,6 +38,7 @@ def build_res_unet(n_input=1, n_output=2, size=256, freeze_encoder=True):
     return DynamicUnet(encoder, n_output, (size, size), norm_type=None)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 logger.info(f"Using device: {device}")
 
 model = build_res_unet(n_input=1, n_output=2, size=256, freeze_encoder=True)
